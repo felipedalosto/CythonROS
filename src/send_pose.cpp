@@ -10,6 +10,19 @@
 using namespace cv;
 using namespace std;
 int color_state = 0;
+int cython_is_buzy = 0;
+
+void cythonCallback(const std_msgs::Int8& msg)
+{
+  //ROS_INFO("I heard: [%d]", msg.data);
+  if (msg.data == 1){
+    cython_is_buzy = 1;
+  } else {
+    cython_is_buzy = 0;
+  }
+
+}
+
 
 int count_white(Mat input_image){
 
@@ -54,6 +67,7 @@ int main(int argc, char **argv)
   
   ros::NodeHandle n;
   ros::Publisher chatter_pub = n.advertise<std_msgs::Int8>("pose", 5000);
+  ros::Subscriber cython_sub = n.subscribe("cython", 1000, cythonCallback);
 
   while (ros::ok())
   {
@@ -71,26 +85,30 @@ int main(int argc, char **argv)
           /*
           cout << "count green: " << count_white(output_green) << "\n";
           cout << "count red: " << count_white(output_red)  << "\n";*/
+          if (cython_is_buzy == 0){
+            if (count_white(output_green) > 40000 && color_state != 1){
+              cout << " Its Green! \n";
+              color_state = 1;
+              ROS_INFO("%d", msg.data);
+              msg.data = color_state;
+              chatter_pub.publish(msg);
+            } 
 
-          if (count_white(output_green) > 40000 && color_state != 1){
-            cout << " Its Green! \n";
-            color_state = 1;
-            ROS_INFO("%d", msg.data);
-            msg.data = color_state;
-            chatter_pub.publish(msg);
-          } 
+            if (count_white(output_red) > 30000 && color_state != 2)  {
+              cout << " Its Red! \n ";
+              color_state = 2;
+              ROS_INFO("%d", msg.data);
+              msg.data = color_state;
+              chatter_pub.publish(msg);
 
-          if (count_white(output_red) > 30000 && color_state != 2)  {
-            cout << " Its Red! \n ";
-            color_state = 2;
-            ROS_INFO("%d", msg.data);
-            msg.data = color_state;
-            chatter_pub.publish(msg);
+            } 
 
-          } if (count_white(output_green) < 40000 && count_white(output_red) < 30000 ) {
-            //cout << " i cant see \n ";
-            color_state = 0;
+            if (count_white(output_green) < 40000 && count_white(output_red) < 30000 ) {
+              //cout << " i cant see \n ";
+              color_state = 0;
+            }
           }
+          
 
           imshow("output_gree", output_green);
           imshow("output_red", output_red);
